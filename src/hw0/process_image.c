@@ -48,7 +48,7 @@ image rgb_to_grayscale(image im)
 {
     assert(im.c == 3);
     image gray = make_image(im.w, im.h, 1);
-    // TODO Fill this in
+
     for (int row = 0; row < im.w; row++) {
         for (int col = 0; col < im.h; col++) {
             float gR = 0.299 * get_pixel(im, row, col, 0);
@@ -63,14 +63,30 @@ image rgb_to_grayscale(image im)
 
 void shift_image(image im, int c, float v)
 {
-    // TODO Fill this in
+    for (int row = 0; row < im.w; row++) {
+        for (int col = 0; col < im.h; col++) {
+            float shifted = v + get_pixel(im, row, col, c);
+            set_pixel(im, row, col, c, shifted);
+        }
+    }
 }
 
 void clamp_image(image im)
 {
-    // TODO Fill this in
+    for (int row = 0; row < im.w; row++) {
+        for (int col = 0; col < im.h; col++) {
+            for (int c = 0; c < im.c; c++) {
+                float v = get_pixel(im, row, col, c);
+                
+                if (v > 1) {
+                    set_pixel(im, row, col, c, 1);
+                } else if (v < 0) {
+                    set_pixel(im, row, col, c, 0);
+                }
+            }
+        }
+    }
 }
-
 
 // These might be handy
 float three_way_max(float a, float b, float c)
@@ -85,10 +101,80 @@ float three_way_min(float a, float b, float c)
 
 void rgb_to_hsv(image im)
 {
-    // TODO Fill this in
+    float hue, saturation, value;
+    float r, g, b;
+
+    for (int row = 0; row < im.w; row++) {
+        for (int col = 0; col < im.h; col++) {
+            r = get_pixel(im, row, col, 0);
+            g = get_pixel(im, row, col, 1);
+            b = get_pixel(im, row, col, 2);
+            
+            // Value
+            value = three_way_max(r, g, b);
+
+            // Saturation
+            float m = three_way_min(r, g, b);
+            float c = value - m;
+            saturation = (value == 0) ? 0 : (c / value);
+
+            // Hue
+            float h;
+            if (value == r) {
+                h = (g - b) / c;
+            } else if (value == g) {
+                h = 2 + (b - r) / c;
+            } else if (value == b) {
+                h = 4 + (r - g) / c;
+            }
+
+            if (c == 0) {
+                hue = 0;
+            } else {
+                hue = (h < 0) ? (1 + h / 6) : (h / 6);
+            }
+
+            // Set to HSV
+            set_pixel(im, row, col, 0, hue);
+            set_pixel(im, row, col, 1, saturation);
+            set_pixel(im, row, col, 2, value);
+        }
+    }
 }
 
 void hsv_to_rgb(image im)
 {
-    // TODO Fill this in
+    float hue, saturation, value;
+    float r, g, b;
+
+    for (int row = 0; row < im.w; row++) {
+        for (int col = 0; col < im.h; col++) {
+            hue = get_pixel(im, row, col, 0);
+            saturation = get_pixel(im, row, col, 1);
+            value = get_pixel(im, row, col, 2);
+
+            float h, c, m;
+            c = saturation * value;
+
+
+            // shade of gray, set to the value
+            if (c == 0) {
+                set_pixel(im, row, col, 0, value);
+                set_pixel(im, row, col, 1, value);
+                set_pixel(im, row, col, 2, value);
+
+                continue;
+            }
+
+            // Other color
+            m = value - c;
+            h = 6 * hue;
+
+            
+
+
+            
+
+        }
+    }
 }
