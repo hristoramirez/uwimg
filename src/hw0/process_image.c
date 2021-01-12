@@ -4,12 +4,20 @@
 #include <math.h>
 #include "image.h"
 
+#define ONE_SIXTH   (1.0 / 6.0)
+#define TWO_SIXTH   (2.0 / 6.0)
+#define THREE_SIXTH (3.0 / 6.0)
+#define FOUR_SIXTH  (4.0 / 6.0)
+#define FIVE_SIXTH  (5.0 / 6.0)
+
 int get_offset(image im, int x, int y, int c) {
     return x + (y * im.w) + (c * im.w * im.h);
 }
 
 float get_pixel(image im, int x, int y, int c)
 {
+    assert((0 <= c) && (c < im.c) == 1);
+
     // Clamp the image if needed
     if (x < 0) {
         x = 0;
@@ -30,7 +38,7 @@ float get_pixel(image im, int x, int y, int c)
 
 void set_pixel(image im, int x, int y, int c, float v)
 {
-    if ((x >= 0) && (x < im.w) && (y >= 0) && (y < im.h)) { // not sure if need to check for c
+    if ((0 <= x) && (x < im.w) && (0 <= y) && (y < im.h) && (0 <= c) && (c < im.c)) {
         int offset = get_offset(im, x, y, c);
         *(im.data + offset) = v;
     }
@@ -155,26 +163,54 @@ void hsv_to_rgb(image im)
 
             float h, c, m;
             c = saturation * value;
+            m = value - c;
+            h = (6.0 * hue);
 
+            // Find the location along the hexagon and compute r, g, b
+            if (c == 0.0) {
+                // shade of gray
+                r = value;
+                g = value;
+                b = value;
+            }  else if (0.0 <= hue && hue <= ONE_SIXTH) {
+                // Red > Green > Blue
+                r = value;  
+                g = m + (h * c);
+                b = m;
+            } else if (ONE_SIXTH < hue && hue <= TWO_SIXTH) {
+                // Green > Red > Blue
+                r = m - c * (h - 2);
+                g = value;
+                b = m;
+            } else if (TWO_SIXTH < hue && hue <= THREE_SIXTH) {
+                // Green > Blue > Red
+                r = m;
+                g = value;
+                b = m + c * (h - 2);
+            } else if (THREE_SIXTH < hue && hue <= FOUR_SIXTH) {
+                // Blue > Green > Red
+                r = m;
+                g = m - c * (h - 4);
+                b = value;
+            } else if (FOUR_SIXTH < hue && hue <= FIVE_SIXTH) {
+                // Blue > Red > Green
+                r = m + c * (h - 4);
+                g = m;
+                b = value;
+            } else if (FIVE_SIXTH < hue && hue <= 1.0) {
+                // Red > Blue > Green
+                h = 6.0 * (hue - 1.0); // since the ranges for h' are [-1, 5)
 
-            // shade of gray, set to the value
-            if (c == 0) {
-                set_pixel(im, row, col, 0, value);
-                set_pixel(im, row, col, 1, value);
-                set_pixel(im, row, col, 2, value);
-
-                continue;
+                r = value;
+                g = m;
+                b = m - (h * c);
             }
 
-            // Other color
-            m = value - c;
-            h = 6 * hue;
-
-            
-
-
-            
-
+            // set the pixel value
+            set_pixel(im, row, col, 0, r);
+            set_pixel(im, row, col, 1, g);
+            set_pixel(im, row, col, 2, b);
         }
+
     }
 }
