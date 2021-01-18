@@ -67,16 +67,14 @@ float bilinear_interpolate(image im, float x, float y, int c)
     left = floorf(x);
     right = ceilf(x);
 
-    // printf("top: %f, bottom: %f, left: %f, right: %f\n", top, bottom, left, right);
-
     d1 = x - left;
     d2 = right - x;
     d3 = y - top;
     d4 = bottom - y;
 
     // Calculate q1 and q2 component for channel c
-    q1 = d4 * get_pixel(im, top, left, c) + d3 * get_pixel(im, bottom, left, c);
-    q2 = d4 * get_pixel(im, top, right, c) + d3 * get_pixel(im, bottom, right, c);
+    q1 = d4 * get_pixel(im, left, top, c) + d3 * get_pixel(im, left, bottom, c);
+    q2 = d4 * get_pixel(im, right, top, c) + d3 * get_pixel(im, right, bottom, c);
 
     return d2 * q1 + d1 * q2;
 }
