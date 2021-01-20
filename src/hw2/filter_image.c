@@ -7,6 +7,19 @@
 #define TWOPI 6.2831853
 #define K_DIM 3
 
+// Creates a K_DIM x K_DIM kernel from the given values
+image make_filter(float values[K_DIM][K_DIM]) {
+    image filter = make_image(K_DIM, K_DIM, 1);
+
+    for (int row = 0; row < K_DIM; row++) {
+        for (int col = 0; col < K_DIM; col++) {
+            set_pixel(filter, col, row, 0, values[row][col]);
+        }
+    }
+
+    return filter;
+}
+
 void l1_normalize(image im)
 {
     float val = 1.0 / (im.w * im.h);
@@ -91,42 +104,35 @@ image convolve_image(image im, image filter, int preserve)
 
 image make_highpass_filter()
 {
-    // // TODO
-    // return make_image(1,1,1);
     float values[K_DIM][K_DIM] ={
         {0, -1, 0},
         {-1, 4, -1},
         {0, -1, 0}
     };
-    image filter = make_image(K_DIM, K_DIM, 1);
 
-    for (int row = 0; row < K_DIM; row++) {
-        for (int col = 0; col < K_DIM; col++) {
-            set_pixel(filter, col, row, 0, values[row][col]);
-        }
-    }
-    
-    
-    // set_pixel(filter, 0, 0, 0, 0.0);
-    // set_pixel(filter, 1, 0, 0, -1.0);
-    // set_pixel(filter, 2, 0, 0, 0.0);
-    // set_pixel(filter, 0, 1, 0, -1.0);
-    // set_pixel(filter, 1, 1, 0, 4.0);
-    // set_pixel(filter, 2, 1, )
-    return filter;
-
+    return make_filter(values);
 }
 
 image make_sharpen_filter()
 {
-    // TODO
-    return make_image(1,1,1);
+    float values[K_DIM][K_DIM] ={
+        {0, -1, 0},
+        {-1, 5, -1},
+        {0, -1, 0}
+    };
+
+    return make_filter(values);
 }
 
 image make_emboss_filter()
 {
-    // TODO
-    return make_image(1,1,1);
+    float values[K_DIM][K_DIM] ={
+        {-2, -1, 0},
+        {-1, 1, 1},
+        {0, 1, 2}
+    };
+
+    return make_filter(values);
 }
 
 // Question 2.2.1: Which of these filters should we use preserve when we run our convolution and which ones should we not? Why?
