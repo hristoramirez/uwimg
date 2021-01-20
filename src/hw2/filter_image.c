@@ -69,14 +69,6 @@ void l1_normalize(image im)
             }
         }
     }
-    // float val = 1.0 / (im.w * im.h);
-    // for (int i = 0; i < im.c; i++) {
-    //     for (int row = 0; row < im.h; row++) {
-    //         for (int col = 0; col < im.w; col++) {
-    //             set_pixel(im, col, row, i, val);
-    //         }
-    //     }
-    // }
 }
 
 image make_box_filter(int w)
@@ -164,34 +156,16 @@ image convolve_image(image im, image filter, int preserve)
 
 image make_highpass_filter()
 {
-    // float values[K_DIM * K_DIM] = {
-    //     0, -1, 0,
-    //     -1, 4, -1,
-    //     0, -1, 0
-    // };
-
     return make_filter(HIGHPASS_KERNEL, K_DIM);
 }
 
 image make_sharpen_filter()
 {
-    // float values[K_DIM * K_DIM] = {
-    //     0, -1, 0,
-    //     -1, 5, -1,
-    //     0, -1, 0
-    // };
-
     return make_filter(SHARPEN_KERNEL, K_DIM);
 }
 
 image make_emboss_filter()
 {
-    // float values[K_DIM * K_DIM] = {
-    //     -2, -1, 0,
-    //     -1, 1, 1,
-    //     0, 1, 2
-    // };
-
     return make_filter(EMBOSS_KERNEL, K_DIM);
 }
 
