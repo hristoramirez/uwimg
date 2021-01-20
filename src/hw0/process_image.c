@@ -16,7 +16,7 @@ int get_offset(image im, int x, int y, int c) {
 
 float get_pixel(image im, int x, int y, int c)
 {
-    assert((0 <= c) && (c < im.c) == 1);
+    assert((0 <= c) && (c < im.c));
 
     // Clamp the image if needed
     if (x < 0) {
