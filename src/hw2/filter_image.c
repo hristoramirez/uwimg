@@ -7,36 +7,96 @@
 #define TWOPI 6.2831853
 #define K_DIM 3
 
-// Creates a K_DIM x K_DIM kernel from the given values
-image make_filter(float values[K_DIM][K_DIM]) {
-    image filter = make_image(K_DIM, K_DIM, 1);
+// Kernel values
+static float HIGHPASS_KERNEL[] = {
+        0, -1, 0,
+        -1, 4, -1,
+        0, -1, 0
+    };
+static float SHARPEN_KERNEL[] = {
+        0, -1, 0,
+        -1, 5, -1,
+        0, -1, 0
+    };
+static float EMBOSS_KERNEL[] = {
+        -2, -1, 0,
+        -1, 1, 1,
+        0, 1, 2
+    };
 
-    for (int row = 0; row < K_DIM; row++) {
-        for (int col = 0; col < K_DIM; col++) {
-            set_pixel(filter, col, row, 0, values[row][col]);
+// Creates a dim x dim filter from the given values
+image make_filter(float* values, int dim) {
+    image filter = make_image(dim, dim, 1);
+
+    for (int row = 0; row < dim; row++) {
+        for (int col = 0; col < dim; col++) {
+            set_pixel(filter, col, row, 0, *(values + row * dim + col));
         }
     }
 
     return filter;
 }
 
+// // Creates a K_DIM x K_DIM kernel from the given values
+// image make_filter(float values[K_DIM][K_DIM]) {
+//     image filter = make_image(K_DIM, K_DIM, 1);
+
+//     for (int row = 0; row < K_DIM; row++) {
+//         for (int col = 0; col < K_DIM; col++) {
+//             set_pixel(filter, col, row, 0, values[row][col]);
+//         }
+//     }
+
+//     return filter;
+// }
+
 void l1_normalize(image im)
 {
-    float val = 1.0 / (im.w * im.h);
-    for (int i = 0; i < im.c; i++) {
+    float sum;
+    float val;
+    for (int c = 0; c < im.c; c++) {
+        sum = 0.0;
         for (int row = 0; row < im.h; row++) {
             for (int col = 0; col < im.w; col++) {
-                set_pixel(im, col, row, i, val);
+                sum += get_pixel(im, col, row, c);
+            }
+        }
+
+        for (int row = 0; row < im.h; row++) {
+            for (int col = 0; col < im.w; col++) {
+                val = (1.0 / sum) * get_pixel(im, col, row, c);
+                set_pixel(im, col, row, c, val);
             }
         }
     }
+    // float val = 1.0 / (im.w * im.h);
+    // for (int i = 0; i < im.c; i++) {
+    //     for (int row = 0; row < im.h; row++) {
+    //         for (int col = 0; col < im.w; col++) {
+    //             set_pixel(im, col, row, i, val);
+    //         }
+    //     }
+    // }
 }
 
 image make_box_filter(int w)
 {
-    image box_filter = make_image(w, w, 1);
-    l1_normalize(box_filter);
-    return box_filter;
+    // image box_filter = make_image(w, w, 1);
+    // l1_normalize(box_filter);
+    // return box_filter;
+
+    image filter = make_image(w, w, 1);
+    
+    // Fill with ones
+    for (int row = 0; row < w; row++) {
+        for (int col = 0; col < w; col++) {
+            set_pixel(filter, col, row, 0, 1.0);
+        }
+    }
+
+    // Normalize
+    l1_normalize(filter);
+    return filter;
 }
 
 image convolve_image(image im, image filter, int preserve)
@@ -104,47 +164,78 @@ image convolve_image(image im, image filter, int preserve)
 
 image make_highpass_filter()
 {
-    float values[K_DIM][K_DIM] ={
-        {0, -1, 0},
-        {-1, 4, -1},
-        {0, -1, 0}
-    };
+    // float values[K_DIM * K_DIM] = {
+    //     0, -1, 0,
+    //     -1, 4, -1,
+    //     0, -1, 0
+    // };
 
-    return make_filter(values);
+    return make_filter(HIGHPASS_KERNEL, K_DIM);
 }
 
 image make_sharpen_filter()
 {
-    float values[K_DIM][K_DIM] ={
-        {0, -1, 0},
-        {-1, 5, -1},
-        {0, -1, 0}
-    };
+    // float values[K_DIM * K_DIM] = {
+    //     0, -1, 0,
+    //     -1, 5, -1,
+    //     0, -1, 0
+    // };
 
-    return make_filter(values);
+    return make_filter(SHARPEN_KERNEL, K_DIM);
 }
 
 image make_emboss_filter()
 {
-    float values[K_DIM][K_DIM] ={
-        {-2, -1, 0},
-        {-1, 1, 1},
-        {0, 1, 2}
-    };
+    // float values[K_DIM * K_DIM] = {
+    //     -2, -1, 0,
+    //     -1, 1, 1,
+    //     0, 1, 2
+    // };
 
-    return make_filter(values);
+    return make_filter(EMBOSS_KERNEL, K_DIM);
 }
 
 // Question 2.2.1: Which of these filters should we use preserve when we run our convolution and which ones should we not? Why?
-// Answer: TODO
+// Answer:
+//      We should use preserve on box, emboss, and sharpen filters. These filters
+//      are mainly stylistic filters that should apply independently to each channel.
+//      The highpass filter should not use preserve because the filter should
+//      transform the original image into a single channel for use in edge detection.
 
 // Question 2.2.2: Do we have to do any post-processing for the above filters? Which ones and why?
-// Answer: TODO
+// Answer: highpass, emboss, sharpen
+//      Highpass, emboss, and sharpen require additional post-processing because
+//      their kernels have potential to overflow the values at channels since they
+//      are not normalized. For example the sharpen kernel would set a pixel surrounded
+//      by lower value pixels to exceed 1. And also the highpass filter projects the
+//      information of mutliple color channels into 1 channel.
 
 image make_gaussian_filter(float sigma)
 {
-    // TODO
-    return make_image(1,1,1);
+    // Determine the size of filter
+    int size = roundf(6.0 * sigma);
+    size = (size % 2 == 0) ? size + 1 : size;
+    //image filter = make_image(size, size, 1);
+    
+    // Calculate using 2d gaussian formula
+    float gaussian[size * size];
+    float val;
+    for (int row = 0; row < size; row++) {
+        for (int col = 0; col < size; col++) {
+            // Adjust coordinates so center is (0,0)
+            int x = -1.0 * ( (size / 2) - col );
+            int y = -1.0 * ( (size / 2) - row );
+            val = 1.0 / (TWOPI * sigma * sigma);
+            val = val * expf(-1.0 * (x * x + y * y) / (2.0 * sigma * sigma));
+            gaussian[row * size + col] = val;
+            //set_pixel(filter, col, row, 0, val);
+        }
+    }
+
+    image filter = make_filter(gaussian, size);
+    l1_normalize(filter);
+
+    return filter;
 }
 
 image add_image(image a, image b)
