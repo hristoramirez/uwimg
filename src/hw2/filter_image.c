@@ -5,6 +5,7 @@
 #include <assert.h>
 #include "image.h"
 #define TWOPI 6.2831853
+#define K_DIM 3
 
 void l1_normalize(image im)
 {
@@ -90,8 +91,30 @@ image convolve_image(image im, image filter, int preserve)
 
 image make_highpass_filter()
 {
-    // TODO
-    return make_image(1,1,1);
+    // // TODO
+    // return make_image(1,1,1);
+    float values[K_DIM][K_DIM] ={
+        {0, -1, 0},
+        {-1, 4, -1},
+        {0, -1, 0}
+    };
+    image filter = make_image(K_DIM, K_DIM, 1);
+
+    for (int row = 0; row < K_DIM; row++) {
+        for (int col = 0; col < K_DIM; col++) {
+            set_pixel(filter, col, row, 0, values[row][col]);
+        }
+    }
+    
+    
+    // set_pixel(filter, 0, 0, 0, 0.0);
+    // set_pixel(filter, 1, 0, 0, -1.0);
+    // set_pixel(filter, 2, 0, 0, 0.0);
+    // set_pixel(filter, 0, 1, 0, -1.0);
+    // set_pixel(filter, 1, 1, 0, 4.0);
+    // set_pixel(filter, 2, 1, )
+    return filter;
+
 }
 
 image make_sharpen_filter()
