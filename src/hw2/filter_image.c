@@ -12,17 +12,27 @@ static float HIGHPASS_KERNEL[] = {
         0, -1, 0,
         -1, 4, -1,
         0, -1, 0
-    };
+};
 static float SHARPEN_KERNEL[] = {
         0, -1, 0,
         -1, 5, -1,
         0, -1, 0
-    };
+};
 static float EMBOSS_KERNEL[] = {
         -2, -1, 0,
         -1, 1, 1,
         0, 1, 2
-    };
+};
+static float GX_KERNEL[] = {
+    -1, 0, 1,
+    -2, 0, 2,
+    -1, 0, 1
+};
+static float GY_KERNEL[] = {
+    -1, -2, -1,
+    0, 0, 0,
+    1, 2, 1 
+};
 
 // Creates a dim x dim filter from the given values
 image make_filter(float* values, int dim) {
@@ -186,10 +196,11 @@ image make_emboss_filter()
 
 image make_gaussian_filter(float sigma)
 {
+    image filter;
     // Determine the size of filter
     int size = roundf(6.0 * sigma);
     size = (size % 2 == 0) ? size + 1 : size;
-    //image filter = make_image(size, size, 1);
+    //filter = make_image(size, size, 1);
     
     // Calculate using 2d gaussian formula
     float gaussian[size * size];
@@ -206,7 +217,7 @@ image make_gaussian_filter(float sigma)
         }
     }
 
-    image filter = make_filter(gaussian, size);
+    filter = make_filter(gaussian, size);
     l1_normalize(filter);
 
     return filter;
@@ -214,37 +225,110 @@ image make_gaussian_filter(float sigma)
 
 image add_image(image a, image b)
 {
-    // TODO
-    return make_image(1,1,1);
+    // Check that images can actually be added
+    assert(a.c == b.c && a.w == b.w && a.h == b.h);    
+    image result = make_image(a.w, a.h, a.c);
+    float a_val;
+    float b_val;
+
+    for (int c = 0; c < a.c; c++) {
+        for (int row = 0; row < a.h; row++) {
+            for (int col = 0; col < a.w; col++) {
+                a_val = get_pixel(a, col, row, c);
+                b_val = get_pixel(b, col, row, c);
+                set_pixel(result, col, row, c, a_val + b_val);
+            }
+        }
+    }
+
+    return result;
 }
 
 image sub_image(image a, image b)
 {
-    // TODO
-    return make_image(1,1,1);
+    // Check that images can actually be added
+    assert(a.c == b.c && a.w == b.w && a.h == b.h);    
+    image result = make_image(a.w, a.h, a.c);
+    float a_val;
+    float b_val;
+
+    for (int c = 0; c < a.c; c++) {
+        for (int row = 0; row < a.h; row++) {
+            for (int col = 0; col < a.w; col++) {
+                a_val = get_pixel(a, col, row, c);
+                b_val = get_pixel(b, col, row, c);
+                set_pixel(result, col, row, c, a_val - b_val);
+            }
+        }
+    }
+
+    return result;
 }
 
 image make_gx_filter()
 {
-    // TODO
-    return make_image(1,1,1);
+    return make_filter(GX_KERNEL, K_DIM);
 }
 
 image make_gy_filter()
 {
-    // TODO
-    return make_image(1,1,1);
+    return make_filter(GY_KERNEL, K_DIM);
 }
 
 void feature_normalize(image im)
 {
-    // TODO
+    float min = INFINITY;
+    float max = 0.0;
+    float val;
+
+    for (int c = 0; c < im.c; c++) {
+        // Find the min and max of the image
+        for (int row = 0; row < im.h; row++) {
+            for (int col = 0; col < im.w; col++) {
+                val = get_pixel(im, col, row, c);
+                min = MIN(val, min);
+                max = MAX(val, max);
+            }
+        }
+
+        for (int row = 0; row < im.h; row++) {
+            for (int col = 0; col < im.w; col++) {
+                if (max - min > 0.0) {
+                    val = get_pixel(im, col, row, c);
+                    val = (val - min) / (max - min);
+                } else {
+                    val = 0.0;
+                }
+                set_pixel(im, col, row, c, val);
+            }
+        }
+    }
 }
 
 image *sobel_image(image im)
 {
-    // TODO
-    return calloc(2, sizeof(image));
+    // Prep
+    image* result = calloc(2, sizeof(image));
+    result[0] = make_image(im.w, im.h, 1); // magnitude
+    result[1] = make_image(im.w, im.h, 1); // direction
+
+    image fx = make_gx_filter();
+    image fy = make_gy_filter();
+
+    image gx = convolve_image(im, fx, 0);
+    image gy = convolve_image(im, fy, 0);
+
+    float x, y;
+    for (int row = 0; row < im.h; row++) {
+        for (int col = 0; col < im.w; col++) {
+            x = get_pixel(gx, col, row, 0);
+            y = get_pixel(gy, col, row, 0);
+            set_pixel(result[0], col, row, 0, sqrtf(x * x + y * y));
+            set_pixel(result[1], col, row, 0, atan2f(y, x));
+        }
+    }
+
+    return result;
 }
 
 image colorize_sobel(image im)
