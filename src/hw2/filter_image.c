@@ -9,19 +9,19 @@
 
 // Kernel values
 static float HIGHPASS_KERNEL[] = {
-        0, -1, 0,
-        -1, 4, -1,
-        0, -1, 0
+    0, -1, 0,
+    -1, 4, -1,
+    0, -1, 0
 };
 static float SHARPEN_KERNEL[] = {
-        0, -1, 0,
-        -1, 5, -1,
-        0, -1, 0
+    0, -1, 0,
+    -1, 5, -1,
+    0, -1, 0
 };
 static float EMBOSS_KERNEL[] = {
-        -2, -1, 0,
-        -1, 1, 1,
-        0, 1, 2
+    -2, -1, 0,
+    -1, 1, 1,
+    0, 1, 2
 };
 static float GX_KERNEL[] = {
     -1, 0, 1,
@@ -47,19 +47,6 @@ image make_filter(float* values, int dim) {
     return filter;
 }
 
-// // Creates a K_DIM x K_DIM kernel from the given values
-// image make_filter(float values[K_DIM][K_DIM]) {
-//     image filter = make_image(K_DIM, K_DIM, 1);
-
-//     for (int row = 0; row < K_DIM; row++) {
-//         for (int col = 0; col < K_DIM; col++) {
-//             set_pixel(filter, col, row, 0, values[row][col]);
-//         }
-//     }
-
-//     return filter;
-// }
-
 void l1_normalize(image im)
 {
     float sum;
@@ -83,19 +70,13 @@ void l1_normalize(image im)
 
 image make_box_filter(int w)
 {
-    // image box_filter = make_image(w, w, 1);
-    // l1_normalize(box_filter);
-    // return box_filter;
-
     image filter = make_image(w, w, 1);
-    
     // Fill with ones
     for (int row = 0; row < w; row++) {
         for (int col = 0; col < w; col++) {
             set_pixel(filter, col, row, 0, 1.0);
         }
     }
-
     // Normalize
     l1_normalize(filter);
     return filter;
@@ -333,6 +314,29 @@ image *sobel_image(image im)
 
 image colorize_sobel(image im)
 {
-    // TODO
-    return make_image(1,1,1);
+    image result = make_image(im.w, im.h, im.c);
+    image filter = make_gaussian_filter(3.0);
+    im = convolve_image(im, filter, 1);
+    image* sobel = sobel_image(im);
+
+    image magnitude = sobel[0];
+    image direction = sobel[1];
+    float h, s;
+    
+    // Process as hsv
+    feature_normalize(magnitude);
+    feature_normalize(direction);
+    for (int row = 0; row < im.h; row++) {
+        for (int col = 0; col < im.w; col++) {
+            s = get_pixel(magnitude, col, row, 0);
+            h = get_pixel(direction, col, row, 0);
+            set_pixel(result, col, row, 0, h);
+            set_pixel(result, col, row, 1, s);
+            set_pixel(result, col, row, 2, s);
+        }
+    }
+    // Convert to rgb
+    hsv_to_rgb(result);
+
+    return result;
 }
