@@ -20,13 +20,13 @@ image resize(image im, int w, int h, interpolateFn fn) {
     by = 0.5 * (ay - 1.0);
 
     // Iterate over new points
-    for (int row = 0; row < w; row++) {
-        for (int col = 0; col < h; col++) {
-            xi = ax * row + bx;
-            yi = ay * col + by;
+    for (int row = 0; row < h; row++) {
+        for (int col = 0; col < w; col++) {
+            xi = ax * col + bx;
+            yi = ay * row + by;
             for (int i = 0; i < im.c; i++) {
                 val = fn(im, xi, yi, i);
-                set_pixel(resized, row, col, i, val);
+                set_pixel(resized, col, row, i, val);
             }
         }
     }

@@ -16,7 +16,7 @@ int get_offset(image im, int x, int y, int c) {
 
 float get_pixel(image im, int x, int y, int c)
 {
-    assert((0 <= c) && (c < im.c) == 1);
+    assert((0 <= c) && (c < im.c));
 
     // Clamp the image if needed
     if (x < 0) {
@@ -57,12 +57,12 @@ image rgb_to_grayscale(image im)
     assert(im.c == 3);
     image gray = make_image(im.w, im.h, 1);
 
-    for (int row = 0; row < im.w; row++) {
-        for (int col = 0; col < im.h; col++) {
-            float gR = 0.299 * get_pixel(im, row, col, 0);
-            float gG = 0.587 * get_pixel(im, row, col, 1);
-            float gB = 0.114 * get_pixel(im, row, col, 2);
-            set_pixel(gray, row, col, 0, gR + gG + gB);
+    for (int row = 0; row < im.h; row++) {
+        for (int col = 0; col < im.w; col++) {
+            float gR = 0.299 * get_pixel(im, col, row, 0);
+            float gG = 0.587 * get_pixel(im, col, row, 1);
+            float gB = 0.114 * get_pixel(im, col, row, 2);
+            set_pixel(gray, col, row, 0, gR + gG + gB);
         }
     }
 
@@ -71,25 +71,25 @@ image rgb_to_grayscale(image im)
 
 void shift_image(image im, int c, float v)
 {
-    for (int row = 0; row < im.w; row++) {
-        for (int col = 0; col < im.h; col++) {
-            float shifted = v + get_pixel(im, row, col, c);
-            set_pixel(im, row, col, c, shifted);
+    for (int row = 0; row < im.h; row++) {
+        for (int col = 0; col < im.w; col++) {
+            float shifted = v + get_pixel(im, col, row, c);
+            set_pixel(im, col, row, c, shifted);
         }
     }
 }
 
 void clamp_image(image im)
 {
-    for (int row = 0; row < im.w; row++) {
-        for (int col = 0; col < im.h; col++) {
-            for (int c = 0; c < im.c; c++) {
-                float v = get_pixel(im, row, col, c);
+    for (int c = 0; c < im.c; c++) {
+        for (int row = 0; row < im.h; row++) {
+            for (int col = 0; col < im.w; col++) {
+                float v = get_pixel(im, col, row, c);
                 
                 if (v > 1) {
-                    set_pixel(im, row, col, c, 1);
+                    set_pixel(im, col, row, c, 1);
                 } else if (v < 0) {
-                    set_pixel(im, row, col, c, 0);
+                    set_pixel(im, col, row, c, 0);
                 }
             }
         }
@@ -112,11 +112,11 @@ void rgb_to_hsv(image im)
     float hue, saturation, value;
     float r, g, b;
 
-    for (int row = 0; row < im.w; row++) {
-        for (int col = 0; col < im.h; col++) {
-            r = get_pixel(im, row, col, 0);
-            g = get_pixel(im, row, col, 1);
-            b = get_pixel(im, row, col, 2);
+    for (int row = 0; row < im.h; row++) {
+        for (int col = 0; col < im.w; col++) {
+            r = get_pixel(im, col, row, 0);
+            g = get_pixel(im, col, row, 1);
+            b = get_pixel(im, col, row, 2);
             
             // Value
             value = three_way_max(r, g, b);
@@ -143,9 +143,9 @@ void rgb_to_hsv(image im)
             }
 
             // Set to HSV
-            set_pixel(im, row, col, 0, hue);
-            set_pixel(im, row, col, 1, saturation);
-            set_pixel(im, row, col, 2, value);
+            set_pixel(im, col, row, 0, hue);
+            set_pixel(im, col, row, 1, saturation);
+            set_pixel(im, col, row, 2, value);
         }
     }
 }
@@ -155,11 +155,11 @@ void hsv_to_rgb(image im)
     float hue, saturation, value;
     float r, g, b;
 
-    for (int row = 0; row < im.w; row++) {
-        for (int col = 0; col < im.h; col++) {
-            hue = get_pixel(im, row, col, 0);
-            saturation = get_pixel(im, row, col, 1);
-            value = get_pixel(im, row, col, 2);
+    for (int row = 0; row < im.h; row++) {
+        for (int col = 0; col < im.w; col++) {
+            hue = get_pixel(im, col, row, 0);
+            saturation = get_pixel(im, col, row, 1);
+            value = get_pixel(im, col, row, 2);
 
             float h, c, m;
             c = saturation * value;
@@ -207,9 +207,9 @@ void hsv_to_rgb(image im)
             }
 
             // set the pixel value
-            set_pixel(im, row, col, 0, r);
-            set_pixel(im, row, col, 1, g);
-            set_pixel(im, row, col, 2, b);
+            set_pixel(im, col, row, 0, r);
+            set_pixel(im, col, row, 1, g);
+            set_pixel(im, col, row, 2, b);
         }
 
     }
