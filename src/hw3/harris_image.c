@@ -113,18 +113,15 @@ image smooth_image(image im, float sigma)
 image structure_matrix(image im, float sigma)
 {
     image S = make_image(im.w, im.h, 3);
-    // TODO: calculate structure matrix for im.
-
-    // Derivative Vector
     float x, y;
     
-    // Smoothing
+    // Smoothing and Derivative
     image fx = make_gx_filter();
     image fy = make_gy_filter();
     image ix = convolve_image(im, fx, 0);
     image iy = convolve_image(im, fy, 0);
     
-
+    // Calculate IxIx, IyIy, IxIy
     for (int row = 0; row < im.h; row++) {
         for (int col = 0; col < im.w; col++) {
             x = get_pixel(ix, col, row, 0);
