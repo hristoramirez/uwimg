@@ -83,8 +83,16 @@ void mark_corners(image im, descriptor *d, int n)
 // returns: single row image of the filter.
 image make_1d_gaussian(float sigma)
 {
-    // TODO: optional, make separable 1d Gaussian.
-    return make_image(1,1,1);
+    image full = make_gaussian_filter(sigma);
+    image filter = make_image(full.w, 1, full.c);
+
+    for (int col = 0; col < filter.w; col++) {
+        float val = get_pixel(full, col, 1 + full.h / 2, 0);
+        set_pixel(filter, col, 0, 0, val);
+    }
+
+    free_image(full);
+    return filter;
 }
 
 // Smooths an image using separable Gaussian filter.
@@ -93,15 +101,26 @@ image make_1d_gaussian(float sigma)
 // returns: smoothed image.
 image smooth_image(image im, float sigma)
 {
-    if(1){
+    if(0){
         image g = make_gaussian_filter(sigma);
         image s = convolve_image(im, g, 1);
         free_image(g);
         return s;
     } else {
-        // TODO: optional, use two convolutions with 1d gaussian filter.
         // If you implement, disable the above if check.
-        return copy_image(im);
+        image g = make_1d_gaussian(sigma);
+        image s = convolve_image(im, g, 1);
+        image flip = make_image(g.h, g.w, 1);
+        for (int n = 0; n < g.w; n++) {
+            float v = get_pixel(g, n, 0, 0);
+            set_pixel(flip, 0, n, 0, v);
+        }
+
+        s = convolve_image(s, flip, 1);
+
+        free_image(g);
+        free_image(flip);
+        return s;
     }
 }
 
@@ -134,8 +153,9 @@ image structure_matrix(image im, float sigma)
     }
 
     // Weighted Sum of Nearby
-    image gf = make_gaussian_filter(sigma);
-    S = convolve_image(S, gf, 1);
+    // image gf = make_gaussian_filter(sigma);
+    // S = convolve_image(S, gf, 1);
+    S = smooth_image(S, sigma);
 
     return S;
 }
