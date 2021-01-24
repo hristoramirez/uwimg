@@ -114,6 +114,32 @@ image structure_matrix(image im, float sigma)
 {
     image S = make_image(im.w, im.h, 3);
     // TODO: calculate structure matrix for im.
+
+    // Derivative Vector
+    float x, y;
+    
+    // Smoothing
+    image fx = make_gx_filter();
+    image fy = make_gy_filter();
+    image ix = convolve_image(im, fx, 0);
+    image iy = convolve_image(im, fy, 0);
+    
+
+    for (int row = 0; row < im.h; row++) {
+        for (int col = 0; col < im.w; col++) {
+            x = get_pixel(ix, col, row, 0);
+            y = get_pixel(iy, col, row, 0);
+
+            set_pixel(S, col, row, 0, x * x);
+            set_pixel(S, col, row, 1, y * y);
+            set_pixel(S, col, row, 2, x * y);
+        }
+    }
+
+    // Weighted Sum of Nearby
+    image gf = make_gaussian_filter(sigma);
+    S = convolve_image(S, gf, 1);
+
     return S;
 }
 
