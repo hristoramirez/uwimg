@@ -134,7 +134,7 @@ image structure_matrix(image im, float sigma)
     image S = make_image(im.w, im.h, 3);
     float x, y;
     
-    // Smoothing and Derivative
+    // Derivative
     image fx = make_gx_filter();
     image fy = make_gy_filter();
     image ix = convolve_image(im, fx, 0);
@@ -153,8 +153,6 @@ image structure_matrix(image im, float sigma)
     }
 
     // Weighted Sum of Nearby
-    // image gf = make_gaussian_filter(sigma);
-    // S = convolve_image(S, gf, 1);
     S = smooth_image(S, sigma);
 
     return S;
@@ -168,6 +166,27 @@ image cornerness_response(image S)
     image R = make_image(S.w, S.h, 1);
     // TODO: fill in R, "cornerness" for each pixel using the structure matrix.
     // We'll use formulation det(S) - alpha * trace(S)^2, alpha = .06.
+
+    // Each pixel has structure matrix
+    // | a  b |  ->  | IxIx  IxIy |
+    // | c  d |      | IxIy  IyIy |
+    float det, trace, a, b, d;
+    for (int row = 0; row < S.h; row++) {
+        for (int col = 0; col < S.w; col++) {
+            // Determinant: ad - bc, here b == c, ad - bb
+            a = get_pixel(S, col, row, 0); // wIxIx
+            d = get_pixel(S, col, row, 1); // wIyIy
+            b = get_pixel(S, col, row, 2); // wIxIy
+            det = a * d - b * b;
+
+            // Trace: a + d
+            trace = a + d;
+
+            // cornerness using formula
+            set_pixel(R, col, row, 0, det - 0.06 * trace * trace);
+        }
+    }
+
     return R;
 }
 
