@@ -118,7 +118,12 @@ image find_and_draw_matches(image a, image b, float sigma, float thresh, int nms
 float l1_distance(float *a, float *b, int n)
 {
     // TODO: return the correct number.
-    return 0;
+    float sum = 0.0;
+    for (int i = 0; i < n; i++) {
+        sum += fabs(a[i] - b[i]);
+    }
+
+    return sum;
 }
 
 // Finds best matches between descriptors of two images.
@@ -138,11 +143,21 @@ match *match_descriptors(descriptor *a, int an, descriptor *b, int bn, int *mn)
         // TODO: for every descriptor in a, find best match in b.
         // record ai as the index in *a and bi as the index in *b.
         int bind = 0; // <- find the best match
+        float min = INFINITY;
+        for (i = 0; i < bn; i++) {
+            float distance = l1_distance(a->data, b->data, a->n);
+
+            if (distance < min) {
+                min = distance;
+                bind = i;
+            }
+        }
+
         m[j].ai = j;
         m[j].bi = bind; // <- should be index in b.
         m[j].p = a[j].p;
         m[j].q = b[bind].p;
-        m[j].distance = 0; // <- should be the smallest L1 distance!
+        m[j].distance = min; // <- should be the smallest L1 distance!
     }
 
     int count = 0;
@@ -153,6 +168,12 @@ match *match_descriptors(descriptor *a, int an, descriptor *b, int bn, int *mn)
     // Each point should only be a part of one match.
     // Some points will not be in a match.
     // In practice just bring good matches to front of list, set *mn.
+    qsort((void*)a, an, sizeof(descriptor), match_compare);
+    for (j = 0; j < an; ++j) {
+        
+    }
+    
+
     *mn = count;
     free(seen);
     return m;
