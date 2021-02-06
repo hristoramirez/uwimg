@@ -241,7 +241,22 @@ int model_inliers(matrix H, match *m, int n, float thresh)
     // TODO: count number of matches that are inliers
     // i.e. distance(H*p, q) < thresh
     // Also, sort the matches m so the inliers are the first 'count' elements.
+    for (i = 0; i < n; i++) {
+        point projected = project_point(H, m[i].p);
 
+        // Within thresh so put to front and update count
+        if (point_distance(projected, m[i].q) < thresh) {
+            match inlier = m[i];
+
+            // Place match that will be replaced by inlier
+            // in the location of the inlier
+            m[i] = m[count];
+            // Put inlier closer to the front
+            m[count] = inlier;
+
+            count++;
+        } 
+    }
 
     return count;
 }
@@ -252,6 +267,18 @@ int model_inliers(matrix H, match *m, int n, float thresh)
 void randomize_matches(match *m, int n)
 {
     // TODO: implement Fisher-Yates to shuffle the array.
+    int j;
+    match temp;
+    for (int i = n - 1; i >= 1; i--) {
+        // Get random number %(i + 1) to place
+        // in range 0 <= j <= i
+        j = rand() % (i + i);
+
+        // Exchange
+        temp = m[i];
+        m[i] = m[j];
+        m[j] = temp;
+    }
 }
 
 // Computes homography between two images given matching pixels.
@@ -270,7 +297,26 @@ matrix compute_homography(match *matches, int n)
         double y  = matches[i].p.y;
         double yp = matches[i].q.y;
         // TODO: fill in the matrices M and b.
+        int r = i * 2;
 
+        // Fill in M
+        M.data[r][0] = x;
+        M.data[r][1] = y;
+        M.data[r][2] = 1;
+
+        M.data[r+1][3] = x;
+        M.data[r+1][4] = y;
+        M.data[r+1][5] = 1;
+
+        M.data[r][6] = -1 * x * xp;
+        M.data[r][7] = -1 * y * yp;
+
+        M.data[r+1][6] = -1 * x * yp;
+        M.data[r+1][7] = -1 * y * yp;
+
+        // Fill in b
+        b.data[r][0] = xp;
+        b.data[r+1][1] = yp;
     }
     matrix a = solve_system(M, b);
     free_matrix(M); free_matrix(b); 
@@ -281,7 +327,15 @@ matrix compute_homography(match *matches, int n)
 
     matrix H = make_matrix(3, 3);
     // TODO: fill in the homography H based on the result in a.
+    for (int i = 0; i < 8; i++) {
+        int row = i / 3;
+        int col = i % 3;
 
+        H.data[row][col] = a.data[i][0];
+    }
+
+    // Add
+    H.data[2][2] = 1;
 
     free_matrix(a);
     return H;
@@ -309,6 +363,25 @@ matrix RANSAC(match *m, int n, float thresh, int k, int cutoff)
     //         if it's better than the cutoff:
     //             return it immediately
     // if we get to the end return the best homography
+    for (int i = 0; i < k; i++) {
+        // shuffle matches
+        randomize_matches(m, n);
+        // compute homography with at least 4 matches
+        matrix h = compute_homography(m, 4);
+
+        int inlierCount = model_inliers(h, m, n, thresh);   
+        free_matrix(h);
+
+        if (inlierCount > best) {
+            Hb = compute_homography(m, inlierCount);
+            if (inlierCount > cutoff) {
+                return Hb;
+            }
+
+            best = inlierCount;
+        }
+    }
+
     return Hb;
 }
 
@@ -363,6 +436,7 @@ image combine_images(image a, image b, matrix H)
     // and see if their projection from a coordinates to b coordinates falls
     // inside of the bounds of image b. If so, use bilinear interpolation to
     // estimate the value of b at that projection, then fill in image c.
+    
 
     return c;
 }
