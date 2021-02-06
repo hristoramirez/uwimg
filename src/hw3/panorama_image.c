@@ -145,8 +145,7 @@ match *match_descriptors(descriptor *a, int an, descriptor *b, int bn, int *mn)
         int bind = 0; // <- find the best match
         float min = INFINITY;
         for (i = 0; i < bn; i++) {
-            float distance = l1_distance(a->data, b->data, a->n);
-
+            float distance = l1_distance(a[j].data, b[i].data, a[j].n);
             if (distance < min) {
                 min = distance;
                 bind = i;
@@ -160,7 +159,7 @@ match *match_descriptors(descriptor *a, int an, descriptor *b, int bn, int *mn)
         m[j].distance = min; // <- should be the smallest L1 distance!
     }
 
-    int count = 0;
+    int matchCount = 0;
     int *seen = calloc(bn, sizeof(int));
     // TODO: we want matches to be injective (one-to-one).
     // Sort matches based on distance using match_compare and qsort.
@@ -168,13 +167,21 @@ match *match_descriptors(descriptor *a, int an, descriptor *b, int bn, int *mn)
     // Each point should only be a part of one match.
     // Some points will not be in a match.
     // In practice just bring good matches to front of list, set *mn.
-    qsort((void*)a, an, sizeof(descriptor), match_compare);
+    qsort(m, an, sizeof(match), match_compare);
     for (j = 0; j < an; ++j) {
-        
+        if (seen[m[j].bi] != 1) {
+            // Add to seen
+            seen[m[j].bi] = 1;
+
+            // Shift to front of list
+            m[matchCount] = m[j];
+
+            // Update number of matches
+            matchCount++;
+        }
     }
     
-
-    *mn = count;
+    *mn = matchCount;
     free(seen);
     return m;
 }
@@ -190,6 +197,19 @@ point project_point(matrix H, point p)
     // Remember that homogeneous coordinates are equivalent up to scalar.
     // Have to divide by.... something...
     point q = make_point(0, 0);
+    
+    // Prepare matrix to multiply with H
+    c.data[0][0] = p.x;
+    c.data[1][0] = p.y;
+    c.data[2][0] = 1;
+
+    // Multiply
+    matrix result = matrix_mult_matrix(H, c);
+
+    // Normalize
+    q.x = result.data[0][0] / result.data[2][0];
+    q.y = result.data[1][0] / result.data[2][0];
+
     return q;
 }
 
@@ -199,7 +219,10 @@ point project_point(matrix H, point p)
 float point_distance(point p, point q)
 {
     // TODO: should be a quick one.
-    return 0;
+    float dx = p.x - q.x;
+    float dy = p.y - q.y;
+
+    return sqrtf((dx * dx) + (dy * dy));
 }
 
 // Count number of inliers in a set of matches. Should also bring inliers
@@ -218,6 +241,8 @@ int model_inliers(matrix H, match *m, int n, float thresh)
     // TODO: count number of matches that are inliers
     // i.e. distance(H*p, q) < thresh
     // Also, sort the matches m so the inliers are the first 'count' elements.
+
+
     return count;
 }
 
