@@ -168,7 +168,7 @@ match *match_descriptors(descriptor *a, int an, descriptor *b, int bn, int *mn)
     // Some points will not be in a match.
     // In practice just bring good matches to front of list, set *mn.
     qsort(m, an, sizeof(match), match_compare);
-    for (j = 0; j < an; ++j) {
+    for (j = 0; j < an; j++) {
         if (seen[m[j].bi] != 1) {
             // Add to seen
             seen[m[j].bi] = 1;
@@ -272,7 +272,7 @@ void randomize_matches(match *m, int n)
     for (int i = n - 1; i >= 1; i--) {
         // Get random number %(i + 1) to place
         // in range 0 <= j <= i
-        j = rand() % (i + i);
+        j = rand() % (i + 1);
 
         // Exchange
         temp = m[i];
@@ -309,14 +309,14 @@ matrix compute_homography(match *matches, int n)
         M.data[r+1][5] = 1;
 
         M.data[r][6] = -1 * x * xp;
-        M.data[r][7] = -1 * y * yp;
+        M.data[r][7] = -1 * y * xp;
 
         M.data[r+1][6] = -1 * x * yp;
         M.data[r+1][7] = -1 * y * yp;
 
         // Fill in b
         b.data[r][0] = xp;
-        b.data[r+1][1] = yp;
+        b.data[r+1][0] = yp;
     }
     matrix a = solve_system(M, b);
     free_matrix(M); free_matrix(b); 
@@ -377,7 +377,7 @@ matrix RANSAC(match *m, int n, float thresh, int k, int cutoff)
             if (inlierCount > cutoff) {
                 return Hb;
             }
-
+            free_matrix(Hb);
             best = inlierCount;
         }
     }
@@ -423,10 +423,12 @@ image combine_images(image a, image b, matrix H)
     image c = make_image(w, h, a.c);
     
     // Paste image a into the new image offset by dx and dy.
-    for(k = 0; k < a.c; ++k){
-        for(j = 0; j < a.h; ++j){
-            for(i = 0; i < a.w; ++i){
+    for(k = 0; k < a.c; k++){
+        for(j = 0; j < a.h; j++){
+            for(i = 0; i < a.w; i++){
                 // TODO: fill in.
+                float val = get_pixel(a, i, j, k);
+                set_pixel(c, i - dx, j - dy, k, val);
             }
         }
     }
@@ -436,7 +438,21 @@ image combine_images(image a, image b, matrix H)
     // and see if their projection from a coordinates to b coordinates falls
     // inside of the bounds of image b. If so, use bilinear interpolation to
     // estimate the value of b at that projection, then fill in image c.
-    
+    for (k = 0; k < c.c; k++) {
+        for (j = 0; j < c.h; j++) {
+            for (i = 0; i < c.w; i++) {
+                // Project point
+                point p = project_point(H, make_point(i + dx, j + dy));
+
+                // Check if within bounds
+                if ((0 <= p.x && p.x < b.w) && (0 <= p.y && p.y < b.h)) {
+                    // interpolate
+                    float val = bilinear_interpolate(b, p.x, p.y, k);
+                    set_pixel(c, i, j, k, val);
+                }
+            }
+        }
+    }
 
     return c;
 }
