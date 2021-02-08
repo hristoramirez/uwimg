@@ -181,7 +181,6 @@ image make_gaussian_filter(float sigma)
     // Determine the size of filter
     int size = roundf(6.0 * sigma);
     size = (size % 2 == 0) ? size + 1 : size;
-    //filter = make_image(size, size, 1);
     
     // Calculate using 2d gaussian formula
     float gaussian[size * size];
@@ -309,6 +308,10 @@ image *sobel_image(image im)
         }
     }
 
+    free_image(fx);
+    free_image(fy);
+    free_image(gx);
+    free_image(gy);
     return result;
 }
 
@@ -318,18 +321,15 @@ image colorize_sobel(image im)
     image filter = make_gaussian_filter(3.0);
     im = convolve_image(im, filter, 1);
     image* sobel = sobel_image(im);
-
-    image magnitude = sobel[0];
-    image direction = sobel[1];
     float h, s;
     
     // Process as hsv
-    feature_normalize(magnitude);
-    feature_normalize(direction);
+    feature_normalize(sobel[0]);
+    feature_normalize(sobel[1]);
     for (int row = 0; row < im.h; row++) {
         for (int col = 0; col < im.w; col++) {
-            s = get_pixel(magnitude, col, row, 0);
-            h = get_pixel(direction, col, row, 0);
+            s = get_pixel(sobel[0], col, row, 0);
+            h = get_pixel(sobel[1], col, row, 0);
             set_pixel(result, col, row, 0, h);
             set_pixel(result, col, row, 1, s);
             set_pixel(result, col, row, 2, s);
@@ -338,5 +338,9 @@ image colorize_sobel(image im)
     // Convert to rgb
     hsv_to_rgb(result);
 
+
+    free_image(filter);
+    free_image(sobel[0]);
+    free_image(sobel[1]);
     return result;
 }
