@@ -48,6 +48,20 @@ image make_integral_image(image im)
 {
     image integ = make_image(im.w, im.h, im.c);
     // TODO: fill in the integral image
+    float i, above, left, topleft, val;
+    for (int c = 0; c < integ.c; c++) {
+        for (int y = 0; y < integ.h; y++) {
+            for (int x = 0; x < integ.w; x++) {
+                i = get_pixel(im, x, y, c);
+                above = (y == 0) ? 0 : get_pixel(integ, x, y - 1, c);
+                left = (x == 0) ? 0 : get_pixel(integ, x - 1, y, c);
+                topleft = (x == 0 || y == 0) ? 0 : get_pixel(integ, x - 1, y - 1, c);
+                val = i + above + left - topleft;
+                set_pixel(integ, x, y, c, val);
+            }
+        }
+    }
+
     return integ;
 }
 
