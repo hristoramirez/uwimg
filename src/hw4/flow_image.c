@@ -53,9 +53,12 @@ image make_integral_image(image im)
         for (int y = 0; y < integ.h; y++) {
             for (int x = 0; x < integ.w; x++) {
                 i = get_pixel(im, x, y, c);
+
+                // Get values preceeding with bounds checking
                 above = (y == 0) ? 0 : get_pixel(integ, x, y - 1, c);
                 left = (x == 0) ? 0 : get_pixel(integ, x - 1, y, c);
                 topleft = (x == 0 || y == 0) ? 0 : get_pixel(integ, x - 1, y - 1, c);
+
                 val = i + above + left - topleft;
                 set_pixel(integ, x, y, c, val);
             }
@@ -75,6 +78,38 @@ image box_filter_image(image im, int s)
     image integ = make_integral_image(im);
     image S = make_image(im.w, im.h, im.c);
     // TODO: fill in S using the integral image.
+    float A, B, C, D;
+    int top, bottom, left, right;
+    float val, area;
+    int half = s / 2;
+    for (int c = 0; c < im.c; c++) {
+        for (int y = 0; y < im.h; y++) {
+            for (int x = 0; x < im.w; x++) {
+                // Bounds checking of corner coordinates for the box
+                left = (x < half) ? 0 : x - half;
+                right = (x + half > im.w) ? im.w - 1 : x + half;
+                top = (y < half) ? 0 : y - half;
+                bottom = (y + half > im.h - 1) ? im.h - 1 : y + half;
+
+                // Calculate area based on number of valid pixels
+                area = (bottom - top) * (right - left);
+
+                // Get values at each corner of box
+                A = get_pixel(integ, left, top, c);
+                B = get_pixel(integ, right, top, c);
+                C = get_pixel(integ, left, bottom, c);
+                D = get_pixel(integ, right, bottom, c);
+
+                // Calculate average using equation
+                // sum[i(x,y)] = I(D) + I(A) - I(B) - I(C)
+                val = (D + A - B - C) / area;
+
+                set_pixel(S, x, y, c, val);
+            }
+        }
+    }
+
+    free_image(integ);
     return S;
 }
 
