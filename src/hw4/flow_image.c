@@ -85,10 +85,10 @@ image box_filter_image(image im, int s)
     for (int c = 0; c < im.c; c++) {
         for (int y = 0; y < im.h; y++) {
             for (int x = 0; x < im.w; x++) {
-                // Bounds checking of corner coordinates for the box
-                left = (x < half) ? 0 : x - half;
+                // Get x and y coordinates of corners
+                left = (x < half) ? 0 : x - half - 1;
                 right = (x + half > im.w) ? im.w - 1 : x + half;
-                top = (y < half) ? 0 : y - half;
+                top = (y < half) ? 0 : y - half - 1;
                 bottom = (y + half > im.h - 1) ? im.h - 1 : y + half;
 
                 // Calculate area based on number of valid pixels
@@ -102,7 +102,7 @@ image box_filter_image(image im, int s)
 
                 // Calculate average using equation
                 // sum[i(x,y)] = I(D) + I(A) - I(B) - I(C)
-                val = (D + A - B - C) / area;
+                val = (A + D - B - C) / area;
 
                 set_pixel(S, x, y, c, val);
             }
@@ -130,12 +130,44 @@ image time_structure_matrix(image im, image prev, int s)
     }
 
     // TODO: calculate gradients, structure components, and smooth them
+    int x, y;
+    // Calculate gradients
+    image gx_filter = make_gx_filter();
+    image gy_filter = make_gy_filter();
+    image gx = convolve_image(im, gx_filter, 0);
+    image gy = convolve_image(im, gy_filter, 0);
 
-    image S;
+    // Structure matrix 5 channels
+    image S = make_image(im.w, im.h, 5);
 
+    float it, ix, iy;
+    for (y = 0; y < im.h; y++) {
+        for (x = 0; x < im.w; x++) {
+            // Grab gradient values
+            it = get_pixel(im, x, y, 0) - get_pixel(prev, x, y, 0);
+            ix = get_pixel(gx, x, y, 0);
+            iy = get_pixel(gy, x, y, 0);
+
+            // Set values of structure matrix
+            set_pixel(S, x, y, 0, ix * ix);
+            set_pixel(S, x, y, 1, iy * iy);
+            set_pixel(S, x, y, 2, ix * iy);
+            set_pixel(S, x, y, 3, ix * it);
+            set_pixel(S, x, y, 4, iy * it);
+        }
+    }
+
+    // Smooth
+    S = box_filter_image(S, s);
+
+    // Clean up
     if(converted){
         free_image(im); free_image(prev);
     }
+    free_image(gx_filter);
+    free_image(gy_filter);
+    free_image(gx);
+    free_image(gy);
     return S;
 }
 
@@ -158,6 +190,8 @@ image velocity_image(image S, int stride)
             // TODO: calculate vx and vy using the flow equation
             float vx = 0;
             float vy = 0;
+
+            
 
             set_pixel(v, i/stride, j/stride, 0, vx);
             set_pixel(v, i/stride, j/stride, 1, vy);
