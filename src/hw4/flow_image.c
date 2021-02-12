@@ -191,7 +191,34 @@ image velocity_image(image S, int stride)
             float vx = 0;
             float vy = 0;
 
-            
+            // Fill in matrix M
+            M.data[0][0] = Ixx;
+            M.data[0][1] = Ixy;
+            M.data[1][0] = Ixy;
+            M.data[1][1] = Iyy;
+
+            // Invert matrix M
+            matrix MI = matrix_invert(M);
+
+            // Not invertible, skip
+            if (MI.cols != 2 && MI.rows != 2) {
+                continue;
+            }
+
+            // Temporal vector
+            matrix t = make_matrix(2, 1);
+            t.data[0][0] = -Ixt;
+            t.data[1][0] = -Iyt;
+
+            // Calculate velocity vector
+            matrix V = matrix_mult_matrix(MI, t);
+            vx = V.data[0][0];
+            vy = V.data[1][0];
+
+            /// Clean up
+            free_matrix(MI);
+            free_matrix(t);
+            free_matrix(V);
 
             set_pixel(v, i/stride, j/stride, 0, vx);
             set_pixel(v, i/stride, j/stride, 1, vy);
