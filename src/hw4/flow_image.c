@@ -179,6 +179,8 @@ image velocity_image(image S, int stride)
     image v = make_image(S.w/stride, S.h/stride, 3);
     int i, j;
     matrix M = make_matrix(2,2);
+    matrix V = make_matrix(2, 1);
+    matrix t = make_matrix(2, 1);
     for(j = (stride-1)/2; j < S.h; j += stride){
         for(i = (stride-1)/2; i < S.w; i += stride){
             float Ixx = S.data[i + S.w*j + 0*S.w*S.h];
@@ -206,7 +208,6 @@ image velocity_image(image S, int stride)
             }
 
             // Temporal vector
-            matrix t = make_matrix(2, 1);
             t.data[0][0] = -Ixt;
             t.data[1][0] = -Iyt;
 
@@ -217,13 +218,14 @@ image velocity_image(image S, int stride)
 
             /// Clean up
             free_matrix(MI);
-            free_matrix(t);
-            free_matrix(V);
 
             set_pixel(v, i/stride, j/stride, 0, vx);
             set_pixel(v, i/stride, j/stride, 1, vy);
         }
     }
+    
+    free_matrix(V);
+    free_matrix(t);
     free_matrix(M);
     return v;
 }
