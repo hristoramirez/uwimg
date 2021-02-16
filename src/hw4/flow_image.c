@@ -48,6 +48,23 @@ image make_integral_image(image im)
 {
     image integ = make_image(im.w, im.h, im.c);
     // TODO: fill in the integral image
+    float i, above, left, topleft, val;
+    for (int c = 0; c < integ.c; c++) {
+        for (int y = 0; y < integ.h; y++) {
+            for (int x = 0; x < integ.w; x++) {
+                i = get_pixel(im, x, y, c);
+
+                // Get values preceeding with bounds checking
+                above = (y == 0) ? 0 : get_pixel(integ, x, y - 1, c);
+                left = (x == 0) ? 0 : get_pixel(integ, x - 1, y, c);
+                topleft = (x == 0 || y == 0) ? 0 : get_pixel(integ, x - 1, y - 1, c);
+
+                val = i + above + left - topleft;
+                set_pixel(integ, x, y, c, val);
+            }
+        }
+    }
+
     return integ;
 }
 
@@ -61,6 +78,38 @@ image box_filter_image(image im, int s)
     image integ = make_integral_image(im);
     image S = make_image(im.w, im.h, im.c);
     // TODO: fill in S using the integral image.
+    float A, B, C, D;
+    int top, bottom, left, right;
+    float val, area;
+    int half = s / 2;
+    for (int c = 0; c < im.c; c++) {
+        for (int y = 0; y < im.h; y++) {
+            for (int x = 0; x < im.w; x++) {
+                // Get x and y coordinates of corners
+                left = (x < half) ? 0 : x - half - 1;
+                right = (x + half > im.w) ? im.w - 1 : x + half;
+                top = (y < half) ? 0 : y - half - 1;
+                bottom = (y + half > im.h - 1) ? im.h - 1 : y + half;
+
+                // Calculate area based on number of valid pixels
+                area = (bottom - top) * (right - left);
+
+                // Get values at each corner of box
+                A = get_pixel(integ, left, top, c);
+                B = get_pixel(integ, right, top, c);
+                C = get_pixel(integ, left, bottom, c);
+                D = get_pixel(integ, right, bottom, c);
+
+                // Calculate average using equation
+                // sum[i(x,y)] = I(D) + I(A) - I(B) - I(C)
+                val = (A + D - B - C) / area;
+
+                set_pixel(S, x, y, c, val);
+            }
+        }
+    }
+
+    free_image(integ);
     return S;
 }
 
@@ -81,12 +130,44 @@ image time_structure_matrix(image im, image prev, int s)
     }
 
     // TODO: calculate gradients, structure components, and smooth them
+    int x, y;
+    // Calculate gradients
+    image gx_filter = make_gx_filter();
+    image gy_filter = make_gy_filter();
+    image gx = convolve_image(im, gx_filter, 0);
+    image gy = convolve_image(im, gy_filter, 0);
 
-    image S;
+    // Structure matrix 5 channels
+    image S = make_image(im.w, im.h, 5);
 
+    float it, ix, iy;
+    for (y = 0; y < im.h; y++) {
+        for (x = 0; x < im.w; x++) {
+            // Grab gradient values
+            it = get_pixel(im, x, y, 0) - get_pixel(prev, x, y, 0);
+            ix = get_pixel(gx, x, y, 0);
+            iy = get_pixel(gy, x, y, 0);
+
+            // Set values of structure matrix
+            set_pixel(S, x, y, 0, ix * ix);
+            set_pixel(S, x, y, 1, iy * iy);
+            set_pixel(S, x, y, 2, ix * iy);
+            set_pixel(S, x, y, 3, ix * it);
+            set_pixel(S, x, y, 4, iy * it);
+        }
+    }
+
+    // Smooth
+    S = box_filter_image(S, s);
+
+    // Clean up
     if(converted){
         free_image(im); free_image(prev);
     }
+    free_image(gx_filter);
+    free_image(gy_filter);
+    free_image(gx);
+    free_image(gy);
     return S;
 }
 
@@ -98,6 +179,8 @@ image velocity_image(image S, int stride)
     image v = make_image(S.w/stride, S.h/stride, 3);
     int i, j;
     matrix M = make_matrix(2,2);
+    matrix V = make_matrix(2, 1);
+    matrix t = make_matrix(2, 1);
     for(j = (stride-1)/2; j < S.h; j += stride){
         for(i = (stride-1)/2; i < S.w; i += stride){
             float Ixx = S.data[i + S.w*j + 0*S.w*S.h];
@@ -110,10 +193,39 @@ image velocity_image(image S, int stride)
             float vx = 0;
             float vy = 0;
 
+            // Fill in matrix M
+            M.data[0][0] = Ixx;
+            M.data[0][1] = Ixy;
+            M.data[1][0] = Ixy;
+            M.data[1][1] = Iyy;
+
+            // Invert matrix M
+            matrix MI = matrix_invert(M);
+
+            // Not invertible, skip
+            if (MI.cols != 2 && MI.rows != 2) {
+                continue;
+            }
+
+            // Temporal vector
+            t.data[0][0] = -Ixt;
+            t.data[1][0] = -Iyt;
+
+            // Calculate velocity vector
+            matrix V = matrix_mult_matrix(MI, t);
+            vx = V.data[0][0];
+            vy = V.data[1][0];
+
+            /// Clean up
+            free_matrix(MI);
+
             set_pixel(v, i/stride, j/stride, 0, vx);
             set_pixel(v, i/stride, j/stride, 1, vy);
         }
     }
+    
+    free_matrix(V);
+    free_matrix(t);
     free_matrix(M);
     return v;
 }
