@@ -75,6 +75,10 @@ matrix forward_layer(layer *l, matrix in)
 
     // TODO: fix this! multiply input by weights and apply activation function.
     matrix out = make_matrix(in.rows, l->w.cols);
+    // Multiply the input matrix by out weight matrix
+    out = matrix_mult_matrix(in, l->w);
+    // Apply activation function
+    activate_matrix(out, l->activation);
 
 
     free_matrix(l->out);// free the old output
@@ -91,19 +95,23 @@ matrix backward_layer(layer *l, matrix delta)
     // 1.4.1
     // delta is dL/dy
     // TODO: modify it in place to be dL/d(xw)
-
+    gradient_matrix(l->out, l->activation, delta);
 
     // 1.4.2
     // TODO: then calculate dL/dw and save it in l->dw
     free_matrix(l->dw);
-    matrix dw = make_matrix(l->w.rows, l->w.cols); // replace this
+    matrix xt = transpose_matrix(l->in);
+    matrix dw = matrix_mult_matrix(xt, delta);
     l->dw = dw;
 
     
     // 1.4.3
     // TODO: finally, calculate dL/dx and return it.
-    matrix dx = make_matrix(l->in.rows, l->in.cols); // replace this
+    matrix wt = transpose_matrix(l->w);
+    matrix dx = matrix_mult_matrix(delta, wt);
 
+    free_matrix(xt);
+    free_matrix(wt);
     return dx;
 }
 
@@ -116,14 +124,20 @@ void update_layer(layer *l, double rate, double momentum, double decay)
 {
     // TODO:
     // Calculate Δw_t = dL/dw_t - λw_t + mΔw_{t-1}
+    matrix wdg = axpy_matrix(-decay, l->w, l->dw); // dL/dw_t - λw_t
+    matrix dwt = axpy_matrix(momentum, l->v, wdg); // + mΔw_{t-1}
     // save it to l->v
-
+    free_matrix(l->v);
+    l->v = dwt;
 
     // Update l->w
-
+    // w_{t+1} = w_t + ηΔw_t
+    matrix wtp1 = axpy_matrix(rate, l->v, l->w);
+    free_matrix(l->w);
+    l->w = wtp1;
 
     // Remember to free any intermediate results to avoid memory leaks
-
+    free_matrix(wdg);
 }
 
 // Make a new layer for our model
